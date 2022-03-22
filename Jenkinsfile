@@ -1,64 +1,3 @@
-node {
-    try {
-        notifyBuild('STARTED')
-
-        stage('Prepare code') {
-            gitCheckThatOut('branch', 'repo URL')
-        }
-
-        stage('Testing') {
-            echo 'Testing'
-            echo 'Testing - publish coverage results'
-        }
-
-        stage('Staging') {
-            echo 'Deploy Stage'
-        }
-        // @todo add checkpoint
-        stage('Deploy') {
-            echo 'Deploy - Backend'
-            echo 'Deploy - Frontend'
-        }
-  } catch (e) {
-    // If there was an exception thrown, the build failed
-    currentBuild.result = "FAILED"
-    throw e
-  } finally {
-    // Success or failure, always send notifications
-    notifyBuild(currentBuild.result)
-  }
-}
-
-
-/**
- * Clean a Git project workspace.
- * Uses 'git clean' if there is a repository found.
- * Uses Pipeline 'deleteDir()' function if no .git directory is found.
- */
-def gitClean() {
-    timeout(time: 60, unit: 'SECONDS') {
-        if (fileExists('.git')) {
-            echo 'Found Git repository: using Git to clean the tree.'
-            // The sequence of reset --hard and clean -fdx first
-            // in the root and then using submodule foreach
-            // is based on how the Jenkins Git SCM clean before checkout
-            // feature works.
-            sh 'git reset --hard'
-            // Note: -e is necessary to exclude the temp directory
-            // .jenkins-XXXXX in the workspace where Pipeline puts the
-            // batch file for the 'bat' command.
-            //sh 'git clean -fd -e "src/vendor/"'
-            //sh 'git submodule foreach --recursive git reset --hard'
-            //sh 'git submodule foreach --recursive git clean -ffdx'
-        }
-        else
-        {
-            echo 'No Git repository found: using deleteDir() to wipe clean'
-            deleteDir()
-        }
-    }
-}
-
 def notifyBuild(String buildStatus = 'STARTED') {
   // build status of null means successful
   buildStatus =  buildStatus ?: 'SUCCESSFUL'
@@ -85,12 +24,6 @@ def notifyBuild(String buildStatus = 'STARTED') {
 
   // Send notifications
   slackSend (color: colorCode, message: summary)
-
-  emailext(
-      subject: subject,
-      body: details,
-      recipientProviders: [[$class: 'DevelopersRecipientProvider']]
-    )
 }
 
 def gitCheckThatOut(String branch, String vcsUrl) {
